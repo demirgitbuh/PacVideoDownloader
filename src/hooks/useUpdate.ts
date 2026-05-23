@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AppConfig, UpdateCheckResult } from "../types/index.js";
-import { checkPacvUpdate, compareSemver, fetchLatestRelease } from "../lib/updater.js";
+import { checkPacvUpdate, compareSemver, fetchLatestNpmVersion } from "../lib/updater.js";
 import { en } from "../locales/en.js";
 import { patchConfig } from "../lib/config.js";
 
@@ -51,8 +51,7 @@ export default function useUpdate(config: AppConfig | null, currentVersion: stri
     setChecking(true);
 
     try {
-      const release = await fetchLatestRelease("demirgitbuh/pacvideodownloader");
-      const latestVersion = release.tagName.replace(/^v/i, "");
+      const latestVersion = await fetchLatestNpmVersion();
       await patchConfig({ lastUpdateCheck: new Date().toISOString(), latestVersion });
       setUpdate({
         checked: true,

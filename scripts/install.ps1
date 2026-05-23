@@ -17,7 +17,7 @@ if ($PSVersionTable.PSVersion.Major -ge 7 -and $null -ne $PSStyle) {
   $Reset = $PSStyle.Reset
 }
 
-$RepoUrl = "https://github.com/demirgitbuh/pacvideodownloader"
+$RepoUrl = "https://github.com/demirgitbuh/PacVideoDownloader"
 $RootDir = Join-Path $env:LOCALAPPDATA "pacv"
 $BinDir = Join-Path $RootDir "bin"
 $AppDir = Join-Path $RootDir "app"
@@ -147,7 +147,7 @@ function Install-Source-WithTarball {
     $TarPath = Join-Path $TempDir "source.tar.gz"
     Invoke-WebRequest -Uri "$RepoUrl/archive/refs/heads/main.tar.gz" -OutFile $TarPath
     tar -xzf $TarPath -C $TempDir
-    $SourceDir = Get-ChildItem -Path $TempDir -Directory | Where-Object { $_.Name -like "pacvideodownloader-*" } | Select-Object -First 1
+    $SourceDir = Get-ChildItem -Path $TempDir -Directory | Where-Object { $_.Name -like "PacVideoDownloader-*" } | Select-Object -First 1
     if ($null -eq $SourceDir) {
       Fail-Fast "source archive did not contain PacVideoDownloader"
     }

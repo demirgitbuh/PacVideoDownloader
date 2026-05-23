@@ -47,6 +47,8 @@ irm https://raw.githubusercontent.com/demirgitbuh/PacVideoDownloader/main/script
 npm install -g pacvideodownloader
 ```
 
+The npm package runs a `postinstall` step that downloads `yt-dlp` and `ffmpeg` into the package's own `vendor/bin` directory, so `pacv` can work even when those tools are not already on PATH.
+
 PacVideoDownloader is a polished TypeScript terminal UI for `yt-dlp`, built for developers who want guided downloads without memorizing command flags. It installs as `pacv` and manages `yt-dlp`, `ffmpeg`, settings, history, and updates from a modern Ink interface.
 
 ## Demo
@@ -82,7 +84,7 @@ Downloading video
 - Dark monochrome Ink TUI with DemirArch AI orange accents.
 - Guided video, audio, quality, subtitle, playlist, and confirmation flows.
 - Direct URL mode with `pacv <url>`.
-- Non-interactive update command with `pacv update`.
+- Non-interactive update command with `pacv update`, backed by the npm latest release.
 - Persistent settings at `~/.config/pacv/config.json` on Unix and `%APPDATA%\pacv\config.json` on Windows.
 - Download history with search, sorting, re-download, open-location, copy-url, and delete actions.
 - Progress parsing from structured `yt-dlp` progress templates.
@@ -109,6 +111,8 @@ node dist/cli.js --version
 node dist/cli.js update
 ```
 
+For globally installed users, `pacv update` checks the npm registry and updates PacVideoDownloader with `npm install -g pacvideodownloader@latest`.
+
 The project is ESM-only, TypeScript strict, and targets Node.js 20 or newer. Relative TypeScript imports use `.js` extensions so emitted files run directly under Node.
 
 ## NPM Publishing
@@ -130,6 +134,7 @@ The package is configured with:
   },
   "files": [
     "dist",
+    "scripts/postinstall.cjs",
     "README.md",
     "LICENSE",
     "package.json"
@@ -139,6 +144,7 @@ The package is configured with:
     "dev": "tsx src/cli.tsx",
     "start": "node dist/cli.js",
     "typecheck": "tsc --noEmit",
+    "postinstall": "node scripts/postinstall.cjs",
     "prepublishOnly": "npm run typecheck && npm run build"
   }
 }

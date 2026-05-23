@@ -8,7 +8,7 @@ RED="\033[31m"
 BOLD="\033[1m"
 RESET="\033[0m"
 
-REPO_URL="https://github.com/demirgitbuh/pacvideodownloader"
+REPO_URL="https://github.com/demirgitbuh/PacVideoDownloader"
 BIN_DIR="$HOME/.local/bin"
 APP_DIR="$HOME/.local/share/pacv"
 YTDLP_PATH="$BIN_DIR/yt-dlp"
@@ -159,7 +159,7 @@ install_source_with_tarball() {
   tar -xzf "$TMP_DIR/source.tar.gz" -C "$TMP_DIR"
   rm -rf "$APP_DIR"
   mkdir -p "$APP_DIR"
-  SOURCE_DIR="$(find "$TMP_DIR" -maxdepth 1 -type d -name 'pacvideodownloader-*' | head -n 1)"
+  SOURCE_DIR="$(find "$TMP_DIR" -maxdepth 1 -type d -iname 'PacVideoDownloader-*' | head -n 1)"
   [ -n "$SOURCE_DIR" ] || die "source archive did not contain PacVideoDownloader"
   cp -R "$SOURCE_DIR"/. "$APP_DIR"/
 }

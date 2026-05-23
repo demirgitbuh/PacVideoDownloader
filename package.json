@@ -1,13 +1,13 @@
 {
   "name": "pacvideodownloader",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "PacVideoDownloader is a production-ready Ink TUI wrapper around yt-dlp.",
   "type": "module",
   "license": "MIT",
   "author": "DemirArch",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/demirgitbuh/pacvideodownloader.git"
+    "url": "git+https://github.com/demirgitbuh/PacVideoDownloader.git"
   },
   "bin": {
     "pacv": "dist/cli.js"
@@ -17,6 +17,7 @@
   },
   "files": [
     "dist",
+    "scripts/postinstall.cjs",
     "README.md",
     "LICENSE",
     "package.json"
@@ -29,6 +30,7 @@
     "dev": "tsx src/cli.tsx",
     "start": "node dist/cli.js",
     "typecheck": "tsc --noEmit",
+    "postinstall": "node scripts/postinstall.cjs",
     "prepublishOnly": "npm run typecheck && npm run build"
   },
   "dependencies": {

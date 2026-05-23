@@ -4,17 +4,30 @@ import os from "node:os";
 import path from "node:path";
 import { execa } from "execa";
 import { en } from "../locales/en.js";
-import { ensureDirectory, getManagedBinaryDir } from "./paths.js";
+import { ensureDirectory, getManagedBinaryDir, getVendorBinaryDir, pathExists } from "./paths.js";
 import { patchConfig } from "./config.js";
 const sixHoursMs = 6 * 60 * 60 * 1000;
-const pacvRepo = "demirgitbuh/pacvideodownloader";
 const ytdlpRepo = "yt-dlp/yt-dlp";
+const npmPackageName = "pacvideodownloader";
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const stringValue = (record, key) => {
     const value = record[key];
     return typeof value === "string" ? value : "";
 };
 const errorMessage = (error) => (error instanceof Error ? error.message : String(error));
+const binaryName = (baseName) => (process.platform === "win32" ? `${baseName}.exe` : baseName);
+const resolveToolBinary = async (baseName) => {
+    const executableName = binaryName(baseName);
+    const managedPath = path.join(getManagedBinaryDir(), executableName);
+    if (await pathExists(managedPath)) {
+        return managedPath;
+    }
+    const vendorPath = path.join(getVendorBinaryDir(import.meta.url), executableName);
+    if (await pathExists(vendorPath)) {
+        return vendorPath;
+    }
+    return baseName;
+};
 export const compareSemver = (left, right) => {
     const normalize = (version) => version
         .replace(/^v/i, "")
@@ -54,6 +67,23 @@ export const fetchLatestRelease = async (repo) => {
         htmlUrl: stringValue(json, "html_url")
     };
 };
+export const fetchLatestNpmVersion = async () => {
+    const response = await fetch(`https://registry.npmjs.org/${npmPackageName}/latest`, {
+        headers: { Accept: "application/json", "User-Agent": "PacVideoDownloader" }
+    });
+    if (!response.ok) {
+        throw new Error(`${response.status} ${response.statusText}`);
+    }
+    const json = (await response.json());
+    if (!isRecord(json)) {
+        throw new Error(en.update.failed);
+    }
+    const version = stringValue(json, "version");
+    if (version.length === 0) {
+        throw new Error(en.update.failed);
+    }
+    return version;
+};
 export const checkPacvUpdate = async (config, currentVersion) => {
     if (!config.checkUpdatesOnStartup) {
         return { checked: false, available: false };
@@ -68,8 +98,7 @@ export const checkPacvUpdate = async (config, currentVersion) => {
         };
     }
     try {
-        const release = await fetchLatestRelease(pacvRepo);
-        const latestVersion = release.tagName.replace(/^v/i, "");
+        const latestVersion = await fetchLatestNpmVersion();
         await patchConfig({ lastUpdateCheck: new Date(now).toISOString(), latestVersion });
         return {
             checked: true,
@@ -101,7 +130,8 @@ const printFailure = (message) => {
 };
 const commandVersion = async (command, args) => {
     try {
-        const result = await execa(command, [...args], { reject: true });
+        const executable = command === "yt-dlp" || command === "ffmpeg" ? await resolveToolBinary(command) : command;
+        const result = await execa(executable, [...args], { reject: true });
         return result.stdout.split("\n")[0]?.trim() ?? en.common.unavailable;
     }
     catch {
@@ -192,11 +222,8 @@ const updateFfmpeg = async () => {
         await rm(tempDirectory, { recursive: true, force: true });
     }
 };
-const updatePacVideoDownloader = async (projectRoot, tagName) => {
-    await execa("git", ["fetch", "--tags", "--force"], { cwd: projectRoot, reject: true });
-    await execa("git", ["checkout", `tags/${tagName}`], { cwd: projectRoot, reject: true });
-    await execa("npm", ["ci"], { cwd: projectRoot, reject: true });
-    await execa("npm", ["run", "build"], { cwd: projectRoot, reject: true });
+const updatePacVideoDownloader = async () => {
+    await execa("npm", ["install", "-g", `${npmPackageName}@latest`], { reject: true, stdio: "inherit" });
 };
 const renderChangelogSnippet = (body) => {
     const lines = body.split(/\r?\n/).map((line) => line.trim());
@@ -206,12 +233,12 @@ const renderChangelogSnippet = (body) => {
 };
 export const runManualUpdate = async (currentVersion, projectRoot) => {
     console.log(chalk.hex("#FF6B2B").bold(en.cli.updateBanner));
-    let pacvRelease = null;
     let ytdlpRelease = null;
+    let latestPacv = currentVersion;
     const failures = [];
     try {
         printStep(en.cli.checkingComponent(en.app.name));
-        pacvRelease = await fetchLatestRelease(pacvRepo);
+        latestPacv = await fetchLatestNpmVersion();
         printSuccess(en.cli.checkingComponent(en.app.name));
     }
     catch (error) {
@@ -229,23 +256,22 @@ export const runManualUpdate = async (currentVersion, projectRoot) => {
     }
     const currentYtDlp = await commandVersion("yt-dlp", ["--version"]);
     const currentFfmpeg = await commandVersion("ffmpeg", ["-version"]);
-    const latestPacv = pacvRelease?.tagName.replace(/^v/i, "") ?? currentVersion;
     const latestYtDlp = ytdlpRelease?.tagName.replace(/^v/i, "") ?? currentYtDlp;
     const latestFfmpeg = currentFfmpeg === en.common.unavailable ? "static latest" : currentFfmpeg;
     console.log(en.cli.currentLatest(en.app.name, currentVersion, latestPacv));
     console.log(en.cli.currentLatest("yt-dlp", currentYtDlp, latestYtDlp));
     console.log(en.cli.currentLatest("ffmpeg", currentFfmpeg, latestFfmpeg));
-    const appOutdated = compareSemver(currentVersion, latestPacv) < 0 && pacvRelease !== null;
+    const appOutdated = compareSemver(currentVersion, latestPacv) < 0;
     const ytdlpOutdated = currentYtDlp === en.common.unavailable || (ytdlpRelease !== null && compareSemver(currentYtDlp, latestYtDlp) < 0);
     const ffmpegMissing = currentFfmpeg === en.common.unavailable;
-    if (!appOutdated && !ytdlpOutdated && !ffmpegMissing) {
+    if (!appOutdated && !ytdlpOutdated && !ffmpegMissing && failures.length === 0) {
         printSuccess(en.cli.everythingUpToDate);
         return 0;
     }
-    if (appOutdated && pacvRelease !== null) {
+    if (appOutdated) {
         try {
             printStep(en.cli.updating(en.app.name));
-            await updatePacVideoDownloader(projectRoot, pacvRelease.tagName);
+            await updatePacVideoDownloader();
             printSuccess(en.cli.success(en.app.name));
         }
         catch (error) {
@@ -277,18 +303,15 @@ export const runManualUpdate = async (currentVersion, projectRoot) => {
     }
     try {
         printStep(en.cli.verify);
-        await execa(process.execPath, [path.join(projectRoot, "dist", "cli.js"), "--version"], { reject: true });
+        const verifyResult = await commandVersion("pacv", ["--version"]);
+        if (verifyResult === en.common.unavailable && projectRoot.length > 0) {
+            await execa(process.execPath, [path.join(projectRoot, "dist", "cli.js"), "--version"], { reject: true });
+        }
         printSuccess(en.cli.verify);
     }
     catch (error) {
         failures.push(`verify: ${errorMessage(error)}`);
         printFailure(`${en.cli.failed(en.cli.verify)}. ${en.cli.remediation}`);
-    }
-    if (pacvRelease !== null && pacvRelease.body.length > 0) {
-        console.log(chalk.hex("#FF6B2B").bold(en.cli.changelog));
-        for (const line of renderChangelogSnippet(pacvRelease.body)) {
-            console.log(line);
-        }
     }
     if (failures.length > 0) {
         for (const failure of failures) {

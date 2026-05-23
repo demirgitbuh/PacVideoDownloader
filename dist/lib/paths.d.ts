@@ -7,3 +7,4 @@ export declare const ensureDirectory: (directoryPath: string) => Promise<void>;
 export declare const pathExists: (targetPath: string) => Promise<boolean>;
 export declare const resolveProjectRoot: (importMetaUrl: string) => string;
 export declare const getManagedBinaryDir: () => string;
+export declare const getVendorBinaryDir: (importMetaUrl: string) => string;

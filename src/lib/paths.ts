@@ -45,8 +45,21 @@ export const pathExists = async (targetPath: string): Promise<boolean> => {
 
 export const resolveProjectRoot = (importMetaUrl: string): string => {
   const filePath = fileURLToPath(importMetaUrl);
-  const sourceDirectory = path.dirname(filePath);
-  return path.basename(sourceDirectory) === "dist" ? path.dirname(sourceDirectory) : path.dirname(sourceDirectory);
+  let currentDirectory = path.dirname(filePath);
+
+  while (true) {
+    const baseName = path.basename(currentDirectory);
+    if (baseName === "dist" || baseName === "src") {
+      return path.dirname(currentDirectory);
+    }
+
+    const parentDirectory = path.dirname(currentDirectory);
+    if (parentDirectory === currentDirectory) {
+      return path.dirname(filePath);
+    }
+
+    currentDirectory = parentDirectory;
+  }
 };
 
 export const getManagedBinaryDir = (): string => {
@@ -57,3 +70,5 @@ export const getManagedBinaryDir = (): string => {
 
   return path.join(os.homedir(), ".local", "bin");
 };
+
+export const getVendorBinaryDir = (importMetaUrl: string): string => path.join(resolveProjectRoot(importMetaUrl), "vendor", "bin");

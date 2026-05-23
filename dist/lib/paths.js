@@ -35,8 +35,18 @@ export const pathExists = async (targetPath) => {
 };
 export const resolveProjectRoot = (importMetaUrl) => {
     const filePath = fileURLToPath(importMetaUrl);
-    const sourceDirectory = path.dirname(filePath);
-    return path.basename(sourceDirectory) === "dist" ? path.dirname(sourceDirectory) : path.dirname(sourceDirectory);
+    let currentDirectory = path.dirname(filePath);
+    while (true) {
+        const baseName = path.basename(currentDirectory);
+        if (baseName === "dist" || baseName === "src") {
+            return path.dirname(currentDirectory);
+        }
+        const parentDirectory = path.dirname(currentDirectory);
+        if (parentDirectory === currentDirectory) {
+            return path.dirname(filePath);
+        }
+        currentDirectory = parentDirectory;
+    }
 };
 export const getManagedBinaryDir = () => {
     if (process.platform === "win32") {
@@ -45,4 +55,5 @@ export const getManagedBinaryDir = () => {
     }
     return path.join(os.homedir(), ".local", "bin");
 };
+export const getVendorBinaryDir = (importMetaUrl) => path.join(resolveProjectRoot(importMetaUrl), "vendor", "bin");
 //# sourceMappingURL=paths.js.map

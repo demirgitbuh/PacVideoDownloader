@@ -4,7 +4,7 @@ export const en = {
         command: "pacv",
         logo: "PACV",
         author: "DemirArch",
-        github: "github.com/demirgitbuh/pacvideodownloader",
+        github: "github.com/demirgitbuh/PacVideoDownloader",
         license: "MIT",
         madeBy: "Made by DemirArch",
         version: (version) => `v${version}`,

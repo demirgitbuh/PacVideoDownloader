@@ -2,7 +2,7 @@ import { execa } from "execa";
 import { createInterface } from "node:readline";
 import path from "node:path";
 import { en } from "../locales/en.js";
-import { ensureDirectory, expandTilde } from "./paths.js";
+import { ensureDirectory, expandTilde, getManagedBinaryDir, getVendorBinaryDir, pathExists } from "./paths.js";
 import { inferDownloadStep, parseProgressLine } from "./progress.js";
 const progressTemplate = "download:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s";
 const formats = ["mp4", "mp3", "webm", "mkv", "m4a"];
@@ -21,6 +21,28 @@ const getArray = (record, key) => {
     return Array.isArray(value) ? value : [];
 };
 const errorMessage = (error) => (error instanceof Error ? error.message : String(error));
+const binaryName = (baseName) => (process.platform === "win32" ? `${baseName}.exe` : baseName);
+const resolveBinary = async (baseName) => {
+    const executableName = binaryName(baseName);
+    const managedPath = path.join(getManagedBinaryDir(), executableName);
+    if (await pathExists(managedPath)) {
+        return managedPath;
+    }
+    const vendorPath = path.join(getVendorBinaryDir(import.meta.url), executableName);
+    if (await pathExists(vendorPath)) {
+        return vendorPath;
+    }
+    return baseName;
+};
+const resolveYtDlp = async () => resolveBinary("yt-dlp");
+const resolveFfmpegLocation = async () => {
+    const ffmpegPath = await resolveBinary("ffmpeg");
+    return path.isAbsolute(ffmpegPath) ? path.dirname(ffmpegPath) : null;
+};
+const withFfmpegLocation = async (args) => {
+    const ffmpegLocation = await resolveFfmpegLocation();
+    return ffmpegLocation === null ? args : ["--ffmpeg-location", ffmpegLocation, ...args];
+};
 const parseVideoFormat = (value) => {
     if (!isRecord(value)) {
         return null;
@@ -113,7 +135,7 @@ const parsePlaylistMetadata = (value, fallbackUrl) => {
 };
 const runYtDlpJson = async (args) => {
     try {
-        const result = await execa("yt-dlp", [...args], { reject: true });
+        const result = await execa(await resolveYtDlp(), [...args], { reject: true });
         return JSON.parse(result.stdout);
     }
     catch (error) {
@@ -239,12 +261,12 @@ export const computeFilenamePreview = async (selection) => {
         ...playlistArgs(selection),
         selection.url
     ];
-    const result = await execa("yt-dlp", args, { reject: true });
+    const result = await execa(await resolveYtDlp(), await withFfmpegLocation(args), { reject: true });
     return result.stdout.split("\n").find((line) => line.trim().length > 0)?.trim() ?? path.join(expandTilde(selection.downloadDir), selection.filenameTemplate);
 };
 export const startYtDlpDownload = async (selection, onProgress, onLine) => {
     await ensureDirectory(selection.downloadDir);
-    const subprocess = execa("yt-dlp", buildDownloadArgs(selection), { stdout: "pipe", stderr: "pipe", reject: true });
+    const subprocess = execa(await resolveYtDlp(), await withFfmpegLocation(buildDownloadArgs(selection)), { stdout: "pipe", stderr: "pipe", reject: true });
     let currentStep = "idle";
     const consumeStream = async (stream) => {
         if (stream === null) {
@@ -266,8 +288,8 @@ export const startYtDlpDownload = async (selection, onProgress, onLine) => {
     await Promise.all([consumeStream(subprocess.stdout), consumeStream(subprocess.stderr), subprocess]);
 };
 export const getToolVersions = async () => {
-    const ytdlpVersion = await execa("yt-dlp", ["--version"], { reject: true });
-    const ffmpegVersion = await execa("ffmpeg", ["-version"], { reject: true });
+    const ytdlpVersion = await execa(await resolveYtDlp(), ["--version"], { reject: true });
+    const ffmpegVersion = await execa(await resolveBinary("ffmpeg"), ["-version"], { reject: true });
     return {
         ytdlp: ytdlpVersion.stdout.split("\n")[0]?.trim() ?? en.common.unknown,
         ffmpeg: ffmpegVersion.stdout.split("\n")[0]?.trim() ?? en.common.unknown

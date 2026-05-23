@@ -4,7 +4,7 @@ export declare const en: {
         readonly command: "pacv";
         readonly logo: "PACV";
         readonly author: "DemirArch";
-        readonly github: "github.com/demirgitbuh/pacvideodownloader";
+        readonly github: "github.com/demirgitbuh/PacVideoDownloader";
         readonly license: "MIT";
         readonly madeBy: "Made by DemirArch";
         readonly version: (version: string) => string;
