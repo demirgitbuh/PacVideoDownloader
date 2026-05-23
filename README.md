@@ -24,7 +24,7 @@
 </div>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/demirgitbuh/pacvideodownloader/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/demirgitbuh/PacVideoDownloader/main/scripts/install.sh | bash
 ```
 
 <div align="center">
@@ -34,7 +34,7 @@ curl -fsSL https://raw.githubusercontent.com/demirgitbuh/pacvideodownloader/main
 </div>
 
 ```powershell
-irm https://raw.githubusercontent.com/demirgitbuh/pacvideodownloader/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/demirgitbuh/PacVideoDownloader/main/scripts/install.ps1 | iex
 ```
 
 <div align="center">
