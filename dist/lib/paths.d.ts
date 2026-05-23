@@ -1,0 +1,9 @@
+export declare const expandTilde: (value: string) => string;
+export declare const getDefaultDownloadDir: () => string;
+export declare const getConfigDir: () => string;
+export declare const getConfigPath: () => string;
+export declare const getHistoryPath: () => string;
+export declare const ensureDirectory: (directoryPath: string) => Promise<void>;
+export declare const pathExists: (targetPath: string) => Promise<boolean>;
+export declare const resolveProjectRoot: (importMetaUrl: string) => string;
+export declare const getManagedBinaryDir: () => string;
